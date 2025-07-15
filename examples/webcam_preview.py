@@ -1,7 +1,6 @@
 import time
 
 import cv2
-from PIL import Image
 
 from websocket_camera import WebSocketCamera
 
@@ -18,8 +17,6 @@ if __name__ == "__main__":
             frame = cam.get_frame()
             if frame is not None:
                 cv2.imshow("Webcam Frame", frame)
-                pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                # you can process the PIL image here
 
             key = cv2.waitKey(1)
             if key & 0xFF == ord("q"):

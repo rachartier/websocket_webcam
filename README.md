@@ -2,6 +2,8 @@ You need to create 2 separate environments for this project, otherwise WSL2/Powe
 
 ## Create the first environment
 
+(Use requirements_with_torch.txt if you want to try `hf_local_classification.py` example)
+
 ### On Windows
 ```powershell
 python -m venv .venv_win
@@ -25,9 +27,9 @@ First, start the Windows server script:
 python .\src\server.py
 ```
 
-Then, in a separate WSL2 terminal, run the client script:
+Then, in a separate WSL2 terminal, run the demo client script:
 ```bash
-python3 src/client.py
+python3 examples/webcam_preview.py
 ```
 
 You should see the webcam feed from the Windows machine in a WSL2 window.
@@ -41,3 +43,9 @@ To use the thread-safe WebSocketCamera class in your own code, import it as foll
 from websocket_camera import WebSocketCamera
 ```
 
+## Examples
+
+The `examples/` directory contains sample scripts demonstrating how to use the core functionality of this project. These scripts provide practical usage scenarios, such as running local image classification or previewing webcam streams.
+
+- `hf_local_classification.py`: Example of running local image classification using Hugging Face models.
+- `webcam_preview.py`: Simple script to preview webcam video in a window.
