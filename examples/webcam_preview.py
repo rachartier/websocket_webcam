@@ -8,7 +8,7 @@ SERVER_URI: str = "ws://localhost:8011"
 
 if __name__ == "__main__":
     cam = WebSocketCamera(SERVER_URI)
-    cam.start()
+    cam.connect()
 
     print("Connected to server.")
 
@@ -24,5 +24,5 @@ if __name__ == "__main__":
 
             time.sleep(0.01)
     finally:
-        cam.stop()
+        cam.disconnect()
         cv2.destroyAllWindows()

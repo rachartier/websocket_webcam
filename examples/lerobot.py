@@ -16,6 +16,7 @@ async def async_main():
     try:
         for i in range(10):
             frame = await camera.async_read(timeout_ms=200)
+
             if frame is not None:
                 print(f"Async frame {i} shape:", frame.shape)
             else:

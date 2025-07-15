@@ -20,9 +20,9 @@ class WebSocketCamera:
         self._thread: threading.Thread | None = None
         self._logger: logging.Logger = logging.getLogger(__name__)
 
-    def start(self) -> None:
+    def connect(self) -> None:
         """
-        Start the WebSocket camera client in a separate thread.
+        Start the WebSocket feed client in a separate thread.
         """
 
         if self._thread and self._thread.is_alive():
@@ -32,9 +32,9 @@ class WebSocketCamera:
         self._thread = threading.Thread(target=self._run_async_loop, daemon=True)
         self._thread.start()
 
-    def stop(self) -> None:
+    def disconnect(self) -> None:
         """
-        Stop the WebSocket camera client and wait for the thread to finish.
+        Stop the WebSocket feed client and wait for the thread to finish.
         """
 
         self._stop_event.set()
@@ -43,13 +43,37 @@ class WebSocketCamera:
 
     def get_frame(self) -> npt.NDArray[np.uint8] | None:
         """
-        Get the latest frame from the WebSocket camera.
+        Get the latest frame from the WebSocket feed.
 
         Returns:
             npt.NDArray[np.uint8] | None: The latest frame as a NumPy array, or None if no frame is available.
         """
         with self._lock:
             return self._frame.copy() if self._frame is not None else None
+
+    async def async_read(
+        self,
+        timeout_ms: int = 200,
+        polling_interval: float = 0.01,
+    ) -> npt.NDArray[np.uint8] | None:
+        """
+        Asynchronously wait for a frame up to timeout_ms milliseconds.
+        Returns the frame if available, else None.
+        """
+        start_time = asyncio.get_event_loop().time()
+        while True:
+            with self._lock:
+                frame = self._frame.copy() if self._frame is not None else None
+
+            if frame is not None:
+                return frame
+
+            elapsed = (asyncio.get_event_loop().time() - start_time) * 1000
+
+            if elapsed > timeout_ms:
+                return None
+
+            await asyncio.sleep(polling_interval)
 
     def _run_async_loop(self) -> None:
         loop = asyncio.new_event_loop()
@@ -63,35 +87,35 @@ class WebSocketCamera:
     async def _connect_and_receive(self) -> None:
         while not self._stop_event.is_set():
             try:
-                await self._receive_frames()
+                async with websockets.connect(self.server_uri) as websocket:
+                    self._logger.info(f"Connected to {self.server_uri}")
+                    await self._receive_frames(websocket)
             except Exception as e:
                 self._logger.error(f"Connection error: {e}")
                 if not self._stop_event.is_set():
                     await asyncio.sleep(self.reconnect_delay)
 
-    async def _receive_frames(self) -> None:
-        async with websockets.connect(self.server_uri) as websocket:
-            self._logger.info(f"Connected to {self.server_uri}")
+    async def _receive_frames(self, websocket: websockets.ClientConnection) -> None:
+        while not self._stop_event.is_set():
+            try:
+                data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
+                if isinstance(data, str):
+                    data = data.encode()
 
-            while not self._stop_event.is_set():
-                try:
-                    data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
-                    if isinstance(data, str):
-                        data = data.encode()
+                frame: npt.NDArray[np.uint8] | None = cast(
+                    npt.NDArray[np.uint8] | None,
+                    cv2.imdecode(
+                        np.frombuffer(data, dtype=np.uint8),
+                        cv2.IMREAD_COLOR,
+                    ),
+                )
 
-                    frame: npt.NDArray[np.uint8] | None = cast(
-                        npt.NDArray[np.uint8] | None,
-                        cv2.imdecode(
-                            np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR
-                        ),
-                    )
+                if frame is not None:
+                    with self._lock:
+                        self._frame = frame
 
-                    if frame is not None:
-                        with self._lock:
-                            self._frame = frame
-
-                except asyncio.TimeoutError:
-                    continue
-                except websockets.exceptions.ConnectionClosed:
-                    self._logger.warning("WebSocket connection closed")
-                    break
+            except asyncio.TimeoutError:
+                continue
+            except websockets.exceptions.ConnectionClosed:
+                self._logger.warning("WebSocket connection closed")
+                break

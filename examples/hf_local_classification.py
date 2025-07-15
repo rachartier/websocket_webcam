@@ -48,7 +48,7 @@ def draw_boxes(image: npt.NDArray[np.uint8], detections: list[dict]) -> np.ndarr
 
 if __name__ == "__main__":
     cam = WebSocketCamera(SERVER_URI)
-    cam.start()
+    cam.connect()
     print("Connected to server.")
 
     try:
@@ -65,5 +65,5 @@ if __name__ == "__main__":
             else:
                 time.sleep(0.05)
     finally:
-        cam.stop()
+        cam.disconnect()
         cv2.destroyAllWindows()
