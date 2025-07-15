@@ -49,3 +49,11 @@ The `examples/` directory contains sample scripts demonstrating how to use the c
 
 - `hf_local_classification.py`: Example of running local image classification using Hugging Face models.
 - `webcam_preview.py`: Simple script to preview webcam video in a window.
+
+### How to run examples
+
+To run the example scripts, ensure you have the required environment set up as described above. Then, execute the scripts as follows:
+```bash
+python -m examples.hf_local_classification
+```
+
