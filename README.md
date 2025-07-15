@@ -18,16 +18,26 @@ pip install -r requirements.txt
 ```
 
 
-## Execute the script
+## Execute the scripts
 
 First, start the Windows server script:
 ```powershell
-python .\webcam_server.py
+python .\src\server.py
 ```
 
 Then, in a separate WSL2 terminal, run the client script:
 ```bash
-python3 webcam_client.py
+python3 src/client.py
 ```
 
 You should see the webcam feed from the Windows machine in a WSL2 window.
+
+## Using the WebSocketCamera class
+
+The main reusable camera logic is in `src/websocket_camera.py`.
+To use the thread-safe WebSocketCamera class in your own code, import it as follows:
+
+```python
+from websocket_camera import WebSocketCamera
+```
+

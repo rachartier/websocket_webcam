@@ -5,13 +5,18 @@ import websockets
 from websockets.asyncio.server import ServerConnection
 
 HOST: str = "localhost"
-PORT: int = 8010
+PORT: int = 8011
 TARGET_FPS: int = 60
 
 
-def calculate_sleep_time(start_time: float, end_time: float, target_fps: int) -> float:
+def calculate_sleep_time(
+    start_time: float,
+    end_time: float,
+    target_fps: int,
+) -> float:
     elapsed_time = end_time - start_time
     sleep_time = max(0, (1 / target_fps) - elapsed_time)
+
     return sleep_time
 
 
