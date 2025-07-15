@@ -6,12 +6,12 @@ A WebSocket camera client for receiving video frames from a remote server.
 Example:
     camera = WebSocketCamera("ws://localhost:8000/stream")
     camera.connect()
-    frame = camera.read()
+    frame = camera.get_latest_frame()
     camera.disconnect()
 
     # Or use context manager:
     with WebSocketCamera("ws://localhost:8000/stream") as camera:
-        frame = camera.read()
+        frame = camera.get_latest_frame()
 """
 
 import asyncio
@@ -115,7 +115,7 @@ class WebSocketCamera:
         with self._lock:
             self._frame = None
 
-    def fetch_last_frame(self) -> npt.NDArray[np.uint8]:
+    def get_latest_frame(self) -> npt.NDArray[np.uint8]:
         """
         Get the latest frame.
 
