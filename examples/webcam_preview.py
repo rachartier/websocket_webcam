@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            frame = cam.read()
+            frame = cam.fetch_last_frame()
             cv2.imshow("Webcam Frame", frame)
 
             key = cv2.waitKey(1)
