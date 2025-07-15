@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            frame = cam.get_frame()
+            frame = cam.read()
             if frame is not None:
                 detections = detect_objects(frame)
                 frame_with_boxes = draw_boxes(frame.copy(), detections)

@@ -12,21 +12,12 @@ camera.connect()
 time.sleep(1)  # Allow some time for the connection to establish
 
 
-async def async_main():
+if __name__ == "__main__":
     try:
         for i in range(10):
-            frame = await camera.async_read(timeout_ms=200)
+            frame = camera.read()
 
-            if frame is not None:
-                print(f"Async frame {i} shape:", frame.shape)
-            else:
-                print(f"Frame {i} not received in time.")
+            print(f"Sync frame {i} shape:", frame.shape)
     finally:
         print("Disconnected from server.")
         camera.disconnect()
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(async_main())

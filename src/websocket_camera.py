@@ -1,12 +1,29 @@
 import asyncio
 import logging
 import threading
+import time
 from typing import cast
 
 import cv2
 import numpy as np
 import numpy.typing as npt
 import websockets
+
+
+class WebSocketCameraError(Exception):
+    """Custom exception for WebSocketCamera errors."""
+
+
+class WebSocketCameraNotConnectedError(WebSocketCameraError):
+    """Exception raised when trying to read a frame without an active connection."""
+
+
+class WebSocketCameraFrameError(WebSocketCameraError):
+    """Exception raised when there is an error with the frame data."""
+
+
+class WebSocketCameraConnectionClosedError(WebSocketCameraError):
+    """Exception raised when the WebSocket connection is closed unexpectedly."""
 
 
 class WebSocketCamera:
@@ -20,9 +37,16 @@ class WebSocketCamera:
         self._thread: threading.Thread | None = None
         self._logger: logging.Logger = logging.getLogger(__name__)
 
-    def connect(self) -> None:
+    def connect(self, warmup_read: bool = True, timeout_ms: int = 2000) -> None:
         """
         Start the WebSocket feed client in a separate thread.
+
+        Args:
+            warmup_read (bool): If True, perform a warmup read to ensure the connection is established.
+            timeout_ms (int): Timeout in milliseconds for the warmup read.
+
+        Raises:
+            WebSocketCameraNotConnectedError: If the connection cannot be established or no frame is received within the timeout.
         """
 
         if self._thread and self._thread.is_alive():
@@ -31,6 +55,25 @@ class WebSocketCamera:
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run_async_loop, daemon=True)
         self._thread.start()
+
+        if warmup_read:
+            time_start = time.time_ns()
+
+            while self._frame is None and not self._stop_event.is_set():
+                try:
+                    current_time = time.time_ns()
+                    elapsed_time_ms = (
+                        current_time - time_start
+                    ) / 1e6  # Convert to milliseconds
+
+                    if elapsed_time_ms >= timeout_ms:
+                        raise WebSocketCameraNotConnectedError(
+                            "Failed to receive a frame within the specified timeout."
+                        )
+
+                    time.sleep(0.1)  # Sleep to avoid busy waiting
+                except asyncio.CancelledError:
+                    break
 
     def disconnect(self) -> None:
         """
@@ -41,7 +84,7 @@ class WebSocketCamera:
         if self._thread:
             self._thread.join(timeout=5.0)
 
-    def get_frame(self) -> npt.NDArray[np.uint8] | None:
+    def read(self) -> npt.NDArray[np.uint8]:
         """
         Get the latest frame from the WebSocket feed.
 
@@ -49,31 +92,14 @@ class WebSocketCamera:
             npt.NDArray[np.uint8] | None: The latest frame as a NumPy array, or None if no frame is available.
         """
         with self._lock:
-            return self._frame.copy() if self._frame is not None else None
+            frame = self._frame.copy() if self._frame is not None else None
 
-    async def async_read(
-        self,
-        timeout_ms: int = 200,
-        polling_interval: float = 0.01,
-    ) -> npt.NDArray[np.uint8] | None:
-        """
-        Asynchronously wait for a frame up to timeout_ms milliseconds.
-        Returns the frame if available, else None.
-        """
-        start_time = asyncio.get_event_loop().time()
-        while True:
-            with self._lock:
-                frame = self._frame.copy() if self._frame is not None else None
+        if frame is None:
+            raise WebSocketCameraFrameError(
+                "No frame available. Ensure the camera is connected and streaming."
+            )
 
-            if frame is not None:
-                return frame
-
-            elapsed = (asyncio.get_event_loop().time() - start_time) * 1000
-
-            if elapsed > timeout_ms:
-                return None
-
-            await asyncio.sleep(polling_interval)
+        return frame
 
     def _run_async_loop(self) -> None:
         loop = asyncio.new_event_loop()
@@ -92,8 +118,13 @@ class WebSocketCamera:
                     await self._receive_frames(websocket)
             except Exception as e:
                 self._logger.error(f"Connection error: {e}")
+
                 if not self._stop_event.is_set():
                     await asyncio.sleep(self.reconnect_delay)
+                else:
+                    raise WebSocketCameraNotConnectedError(
+                        "WebSocket connection was stopped before it could be established."
+                    )
 
     async def _receive_frames(self, websocket: websockets.ClientConnection) -> None:
         while not self._stop_event.is_set():
@@ -118,4 +149,6 @@ class WebSocketCamera:
                 continue
             except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("WebSocket connection closed")
-                break
+                raise WebSocketCameraConnectionClosedError(
+                    "WebSocket connection closed unexpectedly."
+                )
