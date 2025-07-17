@@ -32,13 +32,12 @@ class ColorMode(Enum):
 
 
 class Camera(abc.ABC):
-    """Base Camera class compatible with LeRobot."""
+    """Needed to rewrite as Camera interface from LeRobot is not public"""
 
     def __init__(self, config: WebSocketCameraConfig):
-        self.server_uri: str = config.server_uri
         self.width: int | None = config.width
         self.height: int | None = config.height
-        self.reconnect_delay: float = config.reconnect_delay
+        self.fps: int | None = None
 
     @property
     @abc.abstractmethod
@@ -85,7 +84,8 @@ class WebSocketCameraWrapper(Camera):
     ):
         super().__init__(config)
         self._camera: WebSocketCamera = WebSocketCamera(
-            config.server_uri, config.reconnect_delay
+            config.server_uri,
+            config.reconnect_delay,
         )
 
     @property
@@ -123,10 +123,10 @@ class WebSocketCameraWrapper(Camera):
 
         Args:
             color_mode: Desired color mode (RGB, BGR, GRAY).
-                       If None, returns in BGR format (OpenCV default).
+                        If None, returns in BGR format (OpenCV default).
 
         Returns:
-            np.ndarray: Captured frame as a numpy array
+            MatLike: Captured frame as a numpy array
 
         Raises:
             WebSocketCameraError: If camera is not connected or no frame available
@@ -155,7 +155,7 @@ class WebSocketCameraWrapper(Camera):
             timeout_ms: Timeout in milliseconds (unused for WebSocket camera)
 
         Returns:
-            np.ndarray: Captured frame as a numpy array
+            MatLike: Captured frame as a numpy array
         """
         return self.read()
 
@@ -175,32 +175,3 @@ class WebSocketCameraWrapper(Camera):
         exc_tb: TracebackType | None,
     ) -> None:
         self.disconnect()
-
-
-# Convenience function for creating WebSocket camera instances
-def create_websocket_camera(
-    server_uri: str,
-    width: int | None = None,
-    height: int | None = None,
-    reconnect_delay: float = 2.0,
-) -> WebSocketCameraWrapper:
-    """
-    Create a LeRobot-compatible WebSocket camera.
-
-    Args:
-        server_uri: WebSocket server URI (e.g., "ws://localhost:8000/stream")
-        width: Frame width in pixels (informational only)
-        height: Frame height in pixels (informational only)
-        reconnect_delay: Delay between reconnection attempts
-
-    Returns:
-        WebSocketCameraWrapper: Ready-to-use camera instance
-
-    Example:
-        camera = create_websocket_camera("ws://localhost:8000/stream")
-        camera.connect()
-        frame = camera.read(ColorMode.RGB)
-        camera.disconnect()
-    """
-    config = WebSocketCameraConfig(width=width, height=height)
-    return WebSocketCameraWrapper(config, server_uri, reconnect_delay)
