@@ -6,7 +6,6 @@ to the LeRobot Camera interface.
 """
 
 from dataclasses import dataclass
-from types import TracebackType
 from typing import Any, override
 
 import cv2
@@ -117,15 +116,3 @@ class WebSocketCameraWrapper(Camera):
     def disconnect(self) -> None:
         """Disconnect from the camera"""
         self._camera.disconnect()
-
-    def __enter__(self) -> "WebSocketCameraWrapper":
-        self.connect()
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        self.disconnect()
