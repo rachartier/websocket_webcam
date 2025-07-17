@@ -1,69 +1,25 @@
 """
 LeRobot Camera Wrapper for WebSocketCamera
 
-This module provides a wrapper that adapts the WebSocketCamera class to implement
-the LeRobot Camera interface, making it compatible with LeRobot's camera system.
+This module provides a wrapper that adapts the WebSocketCamera class
+to the LeRobot Camera interface.
 """
 
-import abc
 from dataclasses import dataclass
-from enum import Enum
 from types import TracebackType
 from typing import Any, override
 
 import cv2
 from cv2.typing import MatLike
 
+from lerobot.cameras import Camera, CameraConfig, ColorMode
 from websocket_camera import WebSocketCamera
 
 
 @dataclass
-class WebSocketCameraConfig:
+class WebSocketCameraConfig(CameraConfig):
     server_uri: str
-    width: int | None = None
-    height: int | None = None
     reconnect_delay: float = 2.0
-
-
-class ColorMode(Enum):
-    RGB = "rgb"
-    BGR = "bgr"
-    GRAY = "gray"
-
-
-class Camera(abc.ABC):
-    """Needed to rewrite as Camera interface from LeRobot is not public"""
-
-    def __init__(self, config: WebSocketCameraConfig):
-        self.width: int | None = config.width
-        self.height: int | None = config.height
-        self.fps: int | None = None
-
-    @property
-    @abc.abstractmethod
-    def is_connected(self) -> bool:
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def find_cameras() -> list[dict[str, Any]]:
-        pass
-
-    @abc.abstractmethod
-    def connect(self, warmup: bool = True) -> None:
-        pass
-
-    @abc.abstractmethod
-    def read(self, color_mode: ColorMode | None = None) -> MatLike:
-        pass
-
-    @abc.abstractmethod
-    def async_read(self, timeout_ms: float = 5000) -> MatLike:
-        pass
-
-    @abc.abstractmethod
-    def disconnect(self) -> None:
-        pass
 
 
 class WebSocketCameraWrapper(Camera):
@@ -135,8 +91,6 @@ class WebSocketCameraWrapper(Camera):
 
         if color_mode == ColorMode.RGB:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        elif color_mode == ColorMode.GRAY:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         if self.width is not None and self.height is not None:
             frame = cv2.resize(frame, (self.width, self.height))
