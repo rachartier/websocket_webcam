@@ -11,9 +11,15 @@ from src.websocket_camera import WebSocketCamera
 SERVER_URI: str = "ws://localhost:8011"
 
 if __name__ == "__main__":
-    cam = WebSocketCamera(SERVER_URI)
+    cam = WebSocketCamera(
+        SERVER_URI,
+        0,
+        fps=60,
+        reconnect_delay=2.0,
+    )
     cam.connect()
-    print("Connected to server. Ready to fetch frames on demand.")
+
+    print("Connected to server.")
 
     try:
         while True:

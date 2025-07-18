@@ -40,7 +40,8 @@ class WebSocketCameraWrapper(Camera):
         super().__init__(config)
         self._camera: WebSocketCamera = WebSocketCamera(
             config.server_uri,
-            config.reconnect_delay,
+            fps=config.fps,
+            reconnect_delay=config.reconnect_delay,
         )
 
     @property
@@ -90,9 +91,6 @@ class WebSocketCameraWrapper(Camera):
 
         if color_mode == ColorMode.RGB:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        if self.width is not None and self.height is not None:
-            frame = cv2.resize(frame, (self.width, self.height))
 
         return frame
 
